@@ -117,7 +117,7 @@ if run:
             for i, r in enumerate(rows)
         ]
     )
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    st.dataframe(display, width="stretch", hide_index=True)
 
     st.download_button(
         "Download submission.csv",
