@@ -106,6 +106,34 @@ candidates and yields **0 honeypots in the top 100** (limit: 10%).
 > over-aggressive version of this check incorrectly flagged ~9% of the pool; see
 > the git history for the fix.
 
+### Keyword-stuffer mismatch guard
+
+Beyond the title gate, `stuffer_penalty()` directly targets the JD's named trap —
+*"all the AI keywords listed as skills but the title is 'Marketing Manager'"*. It
+cross-checks the number of **claimed** advanced/expert AI skills against the
+**demonstrated** AI work in the career text (core build-terms + ML-terms). When
+claims are high but demonstration is essentially absent and the title is
+non-technical/adjacent, the composite score is multiplied by `0.30–0.75`. A
+genuine "Tier-5" candidate (non-AI title but a real ML career) is **never**
+penalised, because the guard only fires when demonstrated work is missing. On the
+released pool this flags **28** stuffers — all already outside the top 100, which
+is exactly the intended no-op-on-the-good-ones behaviour.
+
+---
+
+## Tests
+
+```bash
+python -m unittest test_rank -v
+```
+
+`test_rank.py` covers honeypot detection (including a **regression test** for the
+skill-duration-vs-career false positive that once flagged ~9% of the pool),
+tiered title scoring, the experience/location/product components, the
+keyword-stuffer guard (including Tier-5 protection), and an end-to-end ranking +
+CSV-format check. A skipped-by-default integration test runs the full pipeline on
+`sample_candidates.json` when present.
+
 ---
 
 ## Reasoning column
@@ -127,6 +155,7 @@ CV/speech lean) so the tone matches the rank. Skills are cited as demonstrated
 | `rank.py` | The ranker. Single command produces `submission.csv`. |
 | `diagnostics.py` | Honeypot-rate and distribution sanity checks. |
 | `app.py` | Streamlit sandbox/demo (the mandatory hosted demo). |
+| `test_rank.py` | Unit + regression tests (`python -m unittest test_rank`). |
 | `requirements.txt` | Pinned dependencies. |
 | `submission_metadata.yaml` | Portal metadata mirror (fill in your team details). |
 | `validate_submission.py` | Official format validator (provided in the bundle). |
