@@ -14,13 +14,14 @@ from __future__ import annotations
 import argparse
 
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Frame, Paragraph, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle
 
-# 16:9 slide canvas (13.33in x 7.5in).
-PAGE_W, PAGE_H = 13.333 * inch, 7.5 * inch
+# Standard landscape A4 (max portal/validator compatibility).
+PAGE_W, PAGE_H = landscape(A4)
 
 NAVY = colors.HexColor("#1F4E78")
 BLUE = colors.HexColor("#2E86C1")
@@ -93,7 +94,7 @@ def slide_title(c: canvas.Canvas, total: int) -> None:
     c.rect(0, PAGE_H * 0.5 - 3, PAGE_W, 6, fill=1, stroke=0)
 
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 38)
+    c.setFont("Helvetica-Bold", 31)
     c.drawCentredString(PAGE_W / 2, PAGE_H * 0.62,
                         "Intelligent Candidate Discovery & Ranking")
     c.setFillColor(LIGHT)
@@ -143,7 +144,7 @@ def slide_architecture(c, total):
              "Top 100  +  grounded reasoning  ->  CSV / XLSX"]
     data = [[Paragraph(f"<b>{i+1}</b>", CELL_B), Paragraph(s, CELL)]
             for i, s in enumerate(steps)]
-    t = Table(data, colWidths=[0.5 * inch, 10.4 * inch], hAlign="LEFT")
+    t = Table(data, colWidths=[0.5 * inch, 9.7 * inch], hAlign="LEFT")
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (0, -1), LIGHT),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -176,7 +177,7 @@ def slide_components(c, total):
              Paragraph("<b>What it rewards</b>", CELL_B)]]
     for name, w, desc in rows:
         data.append([Paragraph(name, CELL_B), Paragraph(w, CELL), Paragraph(desc, CELL)])
-    t = Table(data, colWidths=[1.9 * inch, 1.0 * inch, 8.0 * inch], hAlign="LEFT")
+    t = Table(data, colWidths=[1.8 * inch, 0.9 * inch, 7.5 * inch], hAlign="LEFT")
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -255,7 +256,7 @@ def slide_results(c, total):
         ("Format & tests", "passes validate_submission.py  ·  23 tests green"),
     ]
     data = [[Paragraph(f"<b>{k}</b>", CELL_B), Paragraph(v, CELL)] for k, v in metrics]
-    t = Table(data, colWidths=[3.3 * inch, 7.6 * inch], hAlign="LEFT")
+    t = Table(data, colWidths=[3.1 * inch, 7.2 * inch], hAlign="LEFT")
     t.setStyle(TableStyle([
         ("ROWBACKGROUNDS", (0, 0), (-1, -1), [LIGHT, colors.white]),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
