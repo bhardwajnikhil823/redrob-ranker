@@ -107,6 +107,31 @@ class TestHoneypot(unittest.TestCase):
         hard, _ = R.honeypot_report(c, TODAY)
         self.assertTrue(hard)
 
+    def test_duration_exceeds_date_span(self):
+        # The "8 years at a company founded 3 years ago" honeypot: claims 96
+        # months tenure but the dates only span ~36 months.
+        c = make_candidate(
+            profile={"years_of_experience": 9.0},
+            career_history=[{"company": "Startup", "title": "Senior Engineer",
+                             "start_date": "2023-06-01", "end_date": None,
+                             "duration_months": 96, "is_current": True,
+                             "industry": "Internet", "company_size": "11-50",
+                             "description": "work"}])
+        hard, reasons = R.honeypot_report(c, TODAY)
+        self.assertTrue(hard, reasons)
+
+    def test_duration_matches_span_not_flagged(self):
+        # ~36 months claimed over a ~36-month span is consistent.
+        c = make_candidate(
+            profile={"years_of_experience": 5.0},
+            career_history=[{"company": "Co", "title": "Engineer",
+                             "start_date": "2023-06-01", "end_date": None,
+                             "duration_months": 36, "is_current": True,
+                             "industry": "Internet", "company_size": "201-500",
+                             "description": "work"}])
+        hard, _ = R.honeypot_report(c, TODAY)
+        self.assertFalse(hard)
+
     def test_education_ends_before_start(self):
         c = make_candidate(education=[{
             "institution": "X", "degree": "B", "field_of_study": "CS",

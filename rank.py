@@ -283,6 +283,21 @@ def honeypot_report(c: Dict[str, Any], today: date) -> Tuple[bool, List[str]]:
         if sd and sd > today:
             hard = True
             reasons.append(f"role '{role.get('title','?')}' starts in the future")
+
+        # Claimed tenure longer than the actual date span is impossible - this is
+        # the "8 years of experience at a company founded 3 years ago" honeypot
+        # expressed in the data (duration_months far exceeds the months actually
+        # spanned by start_date -> end_date/today). A 6-month buffer absorbs
+        # rounding so only genuine impossibilities are flagged.
+        role_end = ed if ed else (today if role.get("is_current") else None)
+        if sd and role_end and role_end >= sd:
+            span_months = (role_end - sd).days / 30.44
+            if dm > span_months + 6:
+                hard = True
+                reasons.append(
+                    f"role '{role.get('title','?')}' claims {dm} mo but its dates "
+                    f"span only ~{int(span_months)} mo")
+
         if role.get("is_current") and role.get("end_date"):
             reasons.append("role flagged current but has an end date")
 
