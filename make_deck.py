@@ -19,9 +19,51 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Frame, Paragraph, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
 # Standard landscape A4 (max portal/validator compatibility).
 PAGE_W, PAGE_H = landscape(A4)
+
+
+def _embed_fonts() -> bool:
+    """Override the non-embedded base-14 fonts with embedded TrueType faces so
+    the PDF is fully self-contained.
+
+    The reference deck that the portal accepted was LaTeX output with embedded
+    fonts; reportlab's default base-14 Helvetica is NOT embedded, which strict
+    upload validators can reject. Re-registering the same logical names as TTF
+    means every existing setFont('Helvetica'...) call now uses an embedded font
+    with no other code changes. Falls back silently to base-14 if no system
+    font is found (e.g. on a non-macOS machine).
+    """
+    import os
+    sup = "/System/Library/Fonts/Supplemental/"
+    faces = {
+        "Helvetica":         [sup + "Arial.ttf"],
+        "Helvetica-Bold":    [sup + "Arial Bold.ttf"],
+        "Helvetica-Oblique": [sup + "Arial Italic.ttf", sup + "Arial.ttf"],
+        "Courier":           [sup + "Courier New.ttf", sup + "Arial.ttf"],
+    }
+    embedded = False
+    for name, paths in faces.items():
+        for p in paths:
+            if os.path.exists(p):
+                try:
+                    pdfmetrics.registerFont(TTFont(name, p))
+                    embedded = True
+                    break
+                except Exception:
+                    continue
+    if embedded:
+        registerFontFamily("Helvetica", normal="Helvetica",
+                           bold="Helvetica-Bold", italic="Helvetica-Oblique",
+                           boldItalic="Helvetica-Bold")
+    return embedded
+
+
+_FONTS_EMBEDDED = _embed_fonts()
 
 NAVY = colors.HexColor("#1F4E78")
 BLUE = colors.HexColor("#2E86C1")
