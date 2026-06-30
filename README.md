@@ -35,6 +35,22 @@ python diagnostics.py --candidates ./candidates.jsonl
 
 ---
 
+## Submission deliverables
+
+The portal asks for an XLSX shortlist and a PDF approach deck in addition to the
+GitHub repo. Both are generated from the ranking, reproducibly:
+
+```bash
+# Recruiter-facing XLSX (top 100 enriched with name/title/company/location)
+python export_submission.py --submission submission.csv \
+    --candidates candidates.jsonl --out submission.xlsx
+
+# 9-slide approach deck (what / why / how) as a PDF
+python make_deck.py --out approach_deck.pdf
+```
+
+---
+
 ## Sandbox / demo (`app.py`)
 
 A small Streamlit front-end that runs the **exact same** ranking code on a small
@@ -158,6 +174,8 @@ CV/speech lean) so the tone matches the rank. Skills are cited as demonstrated
 | `diagnostics.py` | Honeypot-rate and distribution sanity checks. |
 | `app.py` | Streamlit sandbox/demo (the mandatory hosted demo). |
 | `test_rank.py` | Unit + regression tests (`python -m unittest test_rank`). |
+| `export_submission.py` | Build the XLSX shortlist from `submission.csv`. |
+| `make_deck.py` | Generate the PDF approach deck. |
 | `requirements.txt` | Pinned dependencies. |
 | `submission_metadata.yaml` | Portal metadata mirror (fill in your team details). |
 | `validate_submission.py` | Official format validator (provided in the bundle). |
