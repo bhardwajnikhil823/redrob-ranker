@@ -35,6 +35,29 @@ python diagnostics.py --candidates ./candidates.jsonl
 
 ---
 
+## Sandbox / demo (`app.py`)
+
+A small Streamlit front-end that runs the **exact same** ranking code on a small
+sample and produces a downloadable, spec-compliant CSV — this is the mandatory
+sandbox from submission_spec Section 10.5.
+
+```bash
+python -m streamlit run app.py        # then open the printed Local URL
+```
+
+**Deploy for free** (gives you the `sandbox_link` for your metadata):
+
+- **Streamlit Community Cloud** — push this repo to GitHub, go to
+  share.streamlit.io, pick the repo, set the main file to `app.py`. It installs
+  from `requirements.txt` automatically.
+- **Hugging Face Spaces** — create a *Streamlit* Space and push this repo to it.
+
+The app defaults to the bundled `sample_candidates.json` and also accepts an
+uploaded `.json` / `.jsonl` / `.jsonl.gz`, so organizers can verify it end to end
+on a small sample within the compute budget.
+
+---
+
 ## How it works
 
 For each candidate a **base score in [0, 1]** is computed as a weighted sum of
@@ -103,6 +126,7 @@ CV/speech lean) so the tone matches the rank. Skills are cited as demonstrated
 |---|---|
 | `rank.py` | The ranker. Single command produces `submission.csv`. |
 | `diagnostics.py` | Honeypot-rate and distribution sanity checks. |
+| `app.py` | Streamlit sandbox/demo (the mandatory hosted demo). |
 | `requirements.txt` | Pinned dependencies. |
 | `submission_metadata.yaml` | Portal metadata mirror (fill in your team details). |
 | `validate_submission.py` | Official format validator (provided in the bundle). |
