@@ -95,11 +95,13 @@ and make every ranking defensible at the Stage-5 interview.
 ### Honeypot handling
 
 `honeypot_report()` flags **logically impossible** profiles — a single role longer
-than the entire declared career, total tenure ≫ years of experience, reversed or
-future dates, education that ends before it starts, and the designed
-"many expert skills with 0 months used" pattern. Flagged profiles are multiplied
-by `0.02` and pushed out of contention. On the released pool this flags **22**
-candidates and yields **0 honeypots in the top 100** (limit: 10%).
+than the entire declared career, **a role whose `duration_months` exceeds the span
+between its start and end dates** (the spec's "8 years at a company founded 3 years
+ago" trap), total tenure ≫ years of experience, reversed or future dates, education
+that ends before it starts, and the designed "many expert skills with 0 months
+used" pattern. Flagged profiles are multiplied by `0.02` and pushed out of
+contention. On the released pool this flags **22** candidates and yields **0
+honeypots in the top 100** (limit: 10%).
 
 > Note: a skill *duration* exceeding the professional career is **not** treated as
 > impossible — people learn skills in college and on side projects — an early
@@ -162,6 +164,7 @@ CV/speech lean) so the tone matches the rank. Skills are cited as demonstrated
 
 ## Compute environment
 
-CPU-only, no GPU, no network during ranking. Peak memory comfortably under 16 GB
-(the 465 MB pool plus a sparse TF-IDF matrix). Total runtime ≈ 30 s for 100K
-candidates.
+CPU-only, no GPU, no network during ranking. Measured on a MacBook Pro (Apple
+M4 Pro, 12 cores): **peak resident memory ≈ 3.5 GB** (the 465 MB pool plus a
+sparse TF-IDF matrix) — well under the 16 GB budget — and **runtime ≈ 30 s** for
+the full 100K pool, comfortably inside the 5-minute limit.
