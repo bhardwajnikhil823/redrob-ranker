@@ -100,6 +100,17 @@ CV_SPEECH_TERMS = ["computer vision", "image classification", "object detection"
                    "text to speech", "tts", "robotics", "slam", "lidar", "ocr",
                    "facial", "pose estimation"]
 
+# AI/ML buzzwords as they appear in the *skills* array. A keyword stuffer loads
+# these up; we cross-check the count against demonstrated work in career text.
+AI_SKILL_TERMS = [
+    "rag", "llm", "large language model", "gpt", "generative ai", "prompt",
+    "pinecone", "weaviate", "qdrant", "milvus", "faiss", "vector", "embedding",
+    "transformer", "bert", "fine-tun", "lora", "peft", "langchain", "llamaindex",
+    "semantic search", "retrieval", "rerank", "sentence transformer",
+    "hugging face", "huggingface", "recommendation", "learning to rank",
+    "nlp", "deep learning", "pytorch", "tensorflow", "machine learning",
+]
+
 # Title tiers. A keyword stuffer wears a title that does NOT match its skills
 # list, so the title is a strong gate - but we tier it, because the JD's "Tier
 # 5" candidate (a backend/data engineer who actually built ML systems) should
@@ -416,6 +427,41 @@ def score_evaluation(text: str) -> float:
     return min(1.0, _count_terms(text, EVAL_TERMS) / 2.0)
 
 
+def count_claimed_ai_skills(c: Dict[str, Any]) -> int:
+    """How many AI/ML skills the candidate *claims* at advanced/expert level."""
+    claimed = 0
+    for sk in c.get("skills", []) or []:
+        name = _lower(sk.get("name"))
+        prof = _lower(sk.get("proficiency"))
+        if name and prof in ("advanced", "expert") and any(
+                t in name for t in AI_SKILL_TERMS):
+            claimed += 1
+    return claimed
+
+
+def stuffer_penalty(title_kind: str, claimed_ai: int, demonstrated: int
+                    ) -> Tuple[float, bool]:
+    """Penalise the JD's named trap: a profile that *lists* lots of AI skills
+    but whose title and career text show no supporting work. Returns a
+    multiplicative factor in (0, 1] and an `is_stuffer` flag.
+
+    `demonstrated` = distinct core build-terms + ML-terms found in the career
+    text (i.e. evidence of real work, not the skills list). The penalty only
+    fires when claims are high AND demonstration is essentially absent, so a
+    genuine "Tier-5" candidate (non-AI title but real ML career) is never hit.
+    """
+    if claimed_ai >= 3 and demonstrated <= 1:
+        if title_kind == "non_tech":
+            return 0.30, True
+        if title_kind in ("adjacent_eng", "unrelated_eng"):
+            return 0.55, True
+        if title_kind == "generic_tech":
+            return 0.75, True
+    if title_kind == "non_tech" and claimed_ai >= 1 and demonstrated == 0:
+        return 0.50, True
+    return 1.0, False
+
+
 # ---------------------------------------------------------------------------
 # 7. Behavioural availability modifier (multiplies the base score)
 # ---------------------------------------------------------------------------
@@ -536,6 +582,9 @@ def build_reasoning(c: Dict[str, Any], feats: Dict[str, Any]) -> str:
     concerns: List[str] = []
     if feats["honeypot"]:
         concerns.append("profile has internal inconsistencies")
+    if feats.get("is_stuffer") and feats["title_kind"] != "non_tech":
+        concerns.append(f"lists {feats.get('claimed_ai', 0)} AI skills but the "
+                        f"career history shows no supporting ML/retrieval work")
     if feats["title_kind"] == "non_tech":
         concerns.append(f"title ('{title}') is non-technical despite an AI skills list")
     if feats["services_frac"] >= 0.999:
@@ -559,6 +608,30 @@ def build_reasoning(c: Dict[str, Any], feats: Dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # 9. Main pipeline
 # ---------------------------------------------------------------------------
+def _semantic_scores(texts: List[str]) -> np.ndarray:
+    """TF-IDF cosine of each candidate's career text against the distilled JD
+    query, normalised to [0, 1].
+
+    Robust to tiny / homogeneous corpora (e.g. small sandbox uploads): if the
+    aggressive df-pruning empties the vocabulary it retries with no pruning, and
+    finally falls back to all-zeros so the other (structured) components still
+    rank the candidates.
+    """
+    n = len(texts)
+    for cfg in (dict(min_df=2, max_df=0.6), dict(min_df=1, max_df=1.0)):
+        try:
+            vec = TfidfVectorizer(sublinear_tf=True, ngram_range=(1, 2),
+                                  max_features=200_000, stop_words="english", **cfg)
+            doc = vec.fit_transform(texts)                    # (n, V) sparse
+            jd = vec.transform([JD_QUERY])                    # (1, V) sparse
+            sims = (doc @ jd.T).toarray().ravel()             # cosine (L2-normed rows)
+            smax = float(sims.max())
+            return sims / smax if smax > 0 else np.zeros(n)
+        except ValueError:
+            continue
+    return np.zeros(n)
+
+
 def rank(candidates: List[Dict[str, Any]], top_k: int = 100) -> List[Dict[str, Any]]:
     n = len(candidates)
     if n == 0:
@@ -573,14 +646,7 @@ def rank(candidates: List[Dict[str, Any]], top_k: int = 100) -> List[Dict[str, A
 
     # --- semantic similarity (TF-IDF cosine vs the distilled JD query) ---
     texts = [career_text(c) for c in candidates]
-    vectorizer = TfidfVectorizer(
-        sublinear_tf=True, ngram_range=(1, 2), min_df=2, max_df=0.6,
-        max_features=200_000, stop_words="english")
-    doc_matrix = vectorizer.fit_transform(texts)              # (n, V) sparse
-    jd_vec = vectorizer.transform([JD_QUERY])                 # (1, V) sparse
-    sims = (doc_matrix @ jd_vec.T).toarray().ravel()          # cosine (rows L2-normed)
-    smax = float(sims.max()) if sims.max() > 0 else 1.0
-    sims_norm = sims / smax                                   # -> [0, 1]
+    sims_norm = _semantic_scores(texts)
 
     scored: List[Dict[str, Any]] = []
     for i, c in enumerate(candidates):
@@ -610,6 +676,13 @@ def rank(candidates: List[Dict[str, Any]], top_k: int = 100) -> List[Dict[str, A
 
         modifier, avail = availability_modifier(c, today)
         composite = base * modifier
+
+        # Keyword-stuffer guard: many claimed AI skills but no demonstrated work.
+        claimed_ai = count_claimed_ai_skills(c)
+        demonstrated = core_hits + ml_hits
+        stuffer_factor, is_stuffer = stuffer_penalty(title_kind, claimed_ai, demonstrated)
+        composite *= stuffer_factor
+
         if hard_hp:
             composite *= 0.02                     # force honeypots out of the top
 
@@ -618,6 +691,7 @@ def rank(candidates: List[Dict[str, Any]], top_k: int = 100) -> List[Dict[str, A
             "services_frac": services_frac, "loc_kind": loc_kind,
             "domain_nlp": nlp_hits, "domain_cv": cv_hits, "avail": avail,
             "honeypot": hard_hp, "hp_reasons": hp_reasons,
+            "is_stuffer": is_stuffer, "claimed_ai": claimed_ai,
         }
         scored.append({
             "candidate_id": c.get("candidate_id"),
