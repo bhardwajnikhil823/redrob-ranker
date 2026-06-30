@@ -1,0 +1,4 @@
+# Redrob ranker - pinned for reproducible Stage-3 runs (CPU only, no network).
+numpy==2.3.4
+scikit-learn==1.7.2
+scipy==1.16.3
