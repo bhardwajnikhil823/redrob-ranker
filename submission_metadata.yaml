@@ -5,25 +5,25 @@
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "TODO-your-team-name"
+team_name: "Redrob Ranker"
 
 primary_contact:
-  name: "TODO Full Name"
-  email: "TODO@example.com"
-  phone: "+91-TODO"
+  name: "Nikhil Bhardwaj"
+  email: "bhardwajnikhil823@gmail.com"
+  phone: "+918219844389"
 
 team_members:
-  - name: "TODO Full Name"
-    email: "TODO@example.com"
-    role: "ML Engineer"
+  - name: "Nikhil Bhardwaj"
+    email: "bhardwajnikhil823@gmail.com"
+    role: "ML Engineer (solo participant)"
 
 # ============================================================================
 # Code and reproducibility
 # ============================================================================
-github_repo: "https://github.com/TODO_USERNAME/TODO_REPO"
+github_repo: "https://github.com/bhardwajnikhil823/redrob-ranker"
 # Required. Must be reachable (private OK if you grant organizer access at Stage 3).
 
-sandbox_link: "https://huggingface.co/spaces/TODO_USERNAME/redrob-ranker"
+sandbox_link: "https://redrob-ranker-nikhil.streamlit.app/"
 # Required. A working hosted environment that runs the ranker on a small sample.
 # See submission_spec Section 10.5. (Streamlit Cloud / HF Spaces / Colab / Binder.)
 
@@ -34,21 +34,23 @@ reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submi
 # Compute environment
 # ============================================================================
 compute:
-  platform: "MacBook (Apple Silicon)"      # TODO confirm your machine
-  cpu_cores: 8                             # TODO confirm
-  ram_gb: 16
+  platform: "MacBook Pro (Apple M4 Pro)"
+  cpu_cores: 12
+  ram_gb: 24                               # machine RAM; ranker peaks ~3.5 GB (well under the 16 GB budget)
   python_version: "3.12.6"
-  os: "macOS"                              # TODO confirm version
+  os: "macOS 26.5.1"
   uses_gpu_for_inference: false            # CPU-only ranker
   has_network_during_ranking: false        # no API calls during ranking
   pre_computation_required: false          # TF-IDF is fit at run time, in-budget
   pre_computation_time_minutes: 0
+  observed_runtime_seconds: 30             # full 100K pool, single command
+  observed_peak_memory_gb: 3.5             # measured via /usr/bin/time -l
 
 # ============================================================================
 # AI tools declaration  (transparency only — declared use is NOT penalised)
 # ============================================================================
 ai_tools_used:
-  - "GitHub Copilot"        # TODO adjust to what you actually used
+  - "GitHub Copilot"
 ai_usage_summary: |
   Used GitHub Copilot as a pair-programming assistant for scaffolding, code
   review, and documentation. All ranking logic, weighting, honeypot rules and
@@ -59,15 +61,22 @@ ai_usage_summary: |
 # Approach summary
 # ============================================================================
 methodology_summary: |
-  Explainable CPU-only ranker. A base score (nine interpretable components:
-  career-substance, TF-IDF semantic match, tiered title gate, experience band,
-  product-vs-services, NLP/IR-vs-CV/speech domain, location, evaluation
-  experience, education tier) is multiplied by a behavioural availability
-  modifier from redrob_signals (response rate, recency, open-to-work, interview
-  completion). The decisive anti-stuffer move is scoring demonstrated work in
-  career descriptions rather than the skills array. Logically-impossible
-  honeypots are detected and forced out (0 in the top 100). Runs in ~30s for
-  100K candidates with no GPU and no network.
+  Explainable, CPU-only ranker (no GPU, no network). Each candidate gets a base
+  score from nine interpretable components - career-substance, TF-IDF semantic
+  match, a tiered title gate, experience band, product-vs-services, NLP/IR-vs-
+  CV/speech domain, location, evaluation experience, education tier - multiplied
+  by a behavioural availability modifier from redrob_signals (response rate,
+  recency, open-to-work, interview completion). The decisive anti-trap move is
+  scoring demonstrated work in career descriptions rather than the keyword-
+  stuffable skills array; a dedicated guard further penalises profiles that list
+  many AI skills but show no supporting career evidence (the JD's "Marketing
+  Manager with AI skills" trap), while protecting genuine career-switchers.
+  Logically-impossible honeypots (role duration exceeding its date span, tenure
+  beyond declared experience, reversed/future dates, zero-usage expert skills)
+  are detected and forced out. Result on the released pool: top 100 is 100%
+  technical AI/ML titles, 82% in the 5-9 year band, 0 honeypots. Runs in ~30s
+  with ~3.5 GB peak memory for 100K candidates. Covered by 23 unit/regression
+  tests.
 
 # ============================================================================
 # Declarations
