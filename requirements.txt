@@ -6,3 +6,7 @@ scipy==1.16.3
 # Sandbox demo only (app.py). Not needed to reproduce submission.csv via rank.py.
 streamlit>=1.49
 pandas>=2.0
+
+# Deliverable generation only (export_submission.py -> XLSX, make_deck.py -> PDF).
+openpyxl>=3.1
+reportlab>=4.0
