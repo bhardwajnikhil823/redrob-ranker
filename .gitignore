@@ -12,3 +12,6 @@ candidates.jsonl.gz
 # Local outputs
 /tmp/
 *.log
+
+# macOS
+.DS_Store
