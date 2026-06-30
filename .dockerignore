@@ -1,0 +1,15 @@
+# Keep the image small and the build context clean.
+candidates.jsonl
+candidates.jsonl.gz
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.venv/
+venv/
+submission.csv
+*.log
+*.docx
+README.docs
+*.txt
+!requirements.txt
